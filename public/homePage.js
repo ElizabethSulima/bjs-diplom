@@ -1,3 +1,30 @@
+const ratesBoard = new RatesBoard();
+const logoutButton = new LogoutButton();
+const moneyManager = new MoneyManager();
+const favoritesWidget = new FavoritesWidget();
+
+function handleMoneyManager(response) {
+  if (response.success === true) {
+    ProfileWidget.showProfile(response.data);
+    moneyManager.setMessage(true, response.message);
+  } else {
+    moneyManager.setMessage(false, response.error);
+  }
+}
+
+function refreshFavorite(data) {
+  favoritesWidget.clearTable();
+  favoritesWidget.fillTable(data);
+  moneyManager.updateUsersList(data);
+}
+
+function updateFavorites(data, response) {
+  if (response.success === true) {
+    refreshFavorite(data);
+    favoritesWidget.setMessage(true, response.message);
+  }
+}
+
 function getCurrentUser() {
   ApiConnector.current((response) => {
     if (response.success === true) {
@@ -7,12 +34,6 @@ function getCurrentUser() {
     }
   });
 }
-
-getCurrentUser();
-
-// ok
-
-const ratesBoard = new RatesBoard();
 
 function fetchRates() {
   ApiConnector.getStocks((response) => {
@@ -25,71 +46,36 @@ function fetchRates() {
   });
 }
 
-fetchRates();
 const updateIntervalMs = 60 * 1000;
 const intervalId = setInterval(fetchRates, updateIntervalMs);
 
-//  ok
-
-const moneyManager = new MoneyManager();
-
-function handleApiResponse(response) {
-  try {
-    if (response.success === true) {
-      ProfileWidget.showProfile(response.data);
-      moneyManager.setMessage(true, response.message);
-    }
-  } catch (error) {
-    moneyManager.setMessage(false, error);
-  }
-}
-
 moneyManager.addMoneyCallback = (data) => {
   ApiConnector.addMoney(data, (response) => {
-    handleApiResponse(response);
+    handleMoneyManager(response);
   });
 };
 
 moneyManager.conversionMoneyCallback = (data) => {
   ApiConnector.convertMoney(data, (response) => {
-    handleApiResponse(response);
+    handleMoneyManager(response);
   });
 };
 
 moneyManager.sendMoneyCallback = (data) => {
   ApiConnector.transferMoney(data, (response) => {
-    handleApiResponse(response);
+    handleMoneyManager(response);
   });
 };
-
-// favorites
-
-const favoritesWidget = new FavoritesWidget();
-
-function updateFavorites(data, response) {
-  if (response.success === true) {
-    favoritesWidget.clearTable();
-    favoritesWidget.fillTable(data);
-    moneyManager.updateUsersList(data);
-    favoritesWidget.setMessage(true, response.message);
-  }
-}
 
 function loadInitialFavorites() {
   ApiConnector.getFavorites((response) => {
     try {
-      if (response.success === true) {
-        favoritesWidget.clearTable();
-        favoritesWidget.fillTable(response.data);
-        moneyManager.updateUsersList(response.data);
-      }
+      refreshFavorite(response.data);
     } catch (error) {
       alert(error.message);
     }
   });
 }
-
-loadInitialFavorites();
 
 favoritesWidget.addUserCallback = (data) => {
   ApiConnector.addUserToFavorites(data, (response) => {
@@ -111,10 +97,6 @@ favoritesWidget.removeUserCallback = (data) => {
   });
 };
 
-// exit ok
-
-const logoutButton = new LogoutButton();
-
 logoutButton.action = () => {
   ApiConnector.logout((response) => {
     try {
@@ -127,3 +109,7 @@ logoutButton.action = () => {
     }
   });
 };
+
+getCurrentUser();
+fetchRates();
+loadInitialFavorites();
